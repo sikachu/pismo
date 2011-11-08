@@ -1,5 +1,4 @@
 require 'nokogiri'
-require 'sanitize'
 begin; require 'ap'; rescue LoadError; end
 
 module Pismo
@@ -58,9 +57,6 @@ module Pismo
         @raw_content.gsub!(/\n{3,}/, "\n\n")
         @raw_content.gsub!(/(\<br(\s\/)?\>){2,}/, "</p><p>")
         
-        # Remove scripts manually, Sanitize and/or Nokogiri seem to go a bit funny with them
-        @raw_content.gsub!(/\<script .*?\<\/script\>/im, '')
-        
         # Get rid of bullshit "smart" quotes and other Unicode nonsense
         @raw_content.force_encoding("ASCII-8BIT") if RUBY_VERSION > "1.9"
         @raw_content.gsub!("\xe2\x80\x89", " ")
@@ -71,14 +67,6 @@ module Pismo
         @raw_content.gsub!("\xe2\x80\xf6", '.')
         @raw_content.force_encoding("UTF-8") if RUBY_VERSION > "1.9"
         
-              
-        # Sanitize the HTML
-        @raw_content = Sanitize.clean(@raw_content,
-          :elements => OK_ELEMENTS,
-          :attributes => OK_ATTRIBUTES,
-          :remove_contents => true,
-          :output_encoding => 'utf-8'
-        )
               
         @doc = Nokogiri::HTML(@raw_content, nil, 'utf-8')
 
@@ -173,8 +161,8 @@ module Pismo
         # If a title was found early in the result document but had text before it, remove that text - it's probably crap
         orphans_to_remove.each { |el| el.remove }
         
-        # Clean up the HTML again - Nokogiri outputs it with full doctype and crap
-        clean_html = strip(Sanitize.clean(content_branch.to_html, :elements => (clean ? BLOCK_OUTPUT_ELEMENTS : OUTPUT_ELEMENTS), :attributes => (clean ? OK_CLEAN_ATTRIBUTES : OK_ATTRIBUTES)))
+        # Skipping the tag stripping
+        clean_html = content_branch.to_html
         
         # If the content is desired as "clean" (i.e. plain-text), do some quick fix-ups
         if clean
